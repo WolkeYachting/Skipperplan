@@ -9,11 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root {
-    --bg:#0a1628; --surface:#111f38; --card:#162640; --border:#1e3354;
-    --accent:#3b82f6; --accent2:#06b6d4; --text:#e2eaf8; --muted:#5a7399;
-    --success:#22c55e; --warning:#f59e0b; --danger:#ef4444; --radius:12px;
-  }
+  :root{--bg:#0a1628;--surface:#111f38;--card:#162640;--border:#1e3354;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2eaf8;--muted:#5a7399;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--radius:12px}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
@@ -25,10 +21,6 @@
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;animation:fadeUp .3s ease both}
   .card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
   .card-title span{color:var(--accent);font-size:16px}
-  .field{margin-bottom:12px}
-  label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
-  textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none;resize:vertical;min-height:70px}
-  textarea:focus{border-color:var(--accent)}
   .btn{width:100%;padding:13px;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
   .btn-primary{background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.35)}
   .btn-primary:active{transform:scale(.97);box-shadow:none}
@@ -40,19 +32,16 @@
   .step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .4s}
   .step.active{background:var(--accent)}
   .step.done{background:var(--success)}
-  .log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;line-height:1.7;max-height:200px;overflow-y:auto;margin-top:14px}
+  .log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;line-height:1.7;max-height:220px;overflow-y:auto;margin-top:14px}
   .log-line{display:flex;gap:8px}
   .log-line.ok .icon{color:var(--success)}
   .log-line.err .icon{color:var(--danger)}
   .log-line.info .icon{color:var(--accent)}
-  .log-line.warn .icon{color:var(--warning)}
   .log-text{color:var(--text);word-break:break-all}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
   .stat-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--accent);line-height:1}
   .stat-label{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-  .hint{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;padding:10px 12px;background:rgba(59,130,246,.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0}
-  .hint strong{color:var(--text)}
   .hidden{display:none!important}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
   .card:nth-child(2){animation-delay:.05s}
@@ -73,19 +62,13 @@
     <div class="step" id="s2"></div>
     <div class="step" id="s3"></div>
   </div>
-  <div class="card" id="cardKey">
-    <div class="card-title"><span>🔑</span> Algolia API Key</div>
-    <div class="field">
-      <label>x-algolia-api-key</label>
-      <textarea id="algoliaKey" placeholder="MGQxYzBh..."></textarea>
-    </div>
-    <div class="hint">
-      <strong>Key holen:</strong> Browser → Skipperplan-Seite öffnen → F12 → Netzwerk → XHR →
-      einen Algolia-Request anklicken → Kopfzeilen →
-      <strong>x-algolia-api-key</strong> kopieren. Gültig ca. 24h.
-    </div>
-    <button class="btn btn-primary" onclick="startFetch()" style="margin-top:16px">
-      Daten abrufen
+  <div class="card" id="cardStart">
+    <div class="card-title"><span>⛵</span> Skipperplan abrufen</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+      Lädt automatisch alle aktuellen Törns und erstellt eine fertige Excel-Datei mit Skipper-Auswertung.
+    </p>
+    <button class="btn btn-primary" onclick="startFetch()">
+      Jetzt starten
     </button>
   </div>
   <div class="card hidden" id="cardLoad">
@@ -103,24 +86,34 @@
   </div>
 </div>
 <script>
+// ── Backend-URL hier eintragen, sobald Render deployed ist ────────────────────
+const BACKEND_URL = 'https://DEINE-APP.onrender.com';
+
 const ALGOLIA_HOST='https://m6n4q601zw-dsn.algolia.net',ALGOLIA_APP_ID='M6N4Q601ZW',ALGOLIA_INDEX='prod_trip_dates_skipperplan_de',HITS_PER_PAGE=100;
 const STAMMSKIPPER={6429:'Julian S',13707:'Miriam M',2430:'Gregor K',13035:'Nicole M',951:'Martin S',14111:'Leon H',17277:'David H',28325:'Adam B',7022:'Mareike W',20147:'Yanik K',6896:'Malte W',9724:'Luke W',6758:'Marc L',347:'Mario L',9375:'Clemens P'};
 const COLUMN_ORDER=['Startdatum','Enddatum','Reisename','Typ','Tage','Altersgruppe','Skipper','ID Skipper','Plätze gesamt','Plätze belegt','Saison','Preisspanne (€)','Land','Kontinent','Anbieter','Trip ID','Trip Date ID','Yacht ID','Yachtmodell','Yachtname','Bootstyp','Baujahr','Yacht Status','Skipper Status','Flotillenführer','Bewerbungen'];
 const SK_LABELS={'confirmed_by_admin_and_skipper':'Bestätigt','confirmed_by_admin':'Vom Admin bestätigt','assigned':'Zugeteilt (offen)'};
-let allHits=[];
 
-function log(msg,type='info'){const icons={ok:'✓',err:'✗',info:'·',warn:'⚠'};const el=document.getElementById('log');el.innerHTML+=`<div class="log-line ${type}"><span class="icon">${icons[type]||'·'}</span><span class="log-text">${msg}</span></div>`;el.scrollTop=el.scrollHeight}
+function log(msg,type='info'){const icons={ok:'✓',err:'✗',info:'·'};const el=document.getElementById('log');el.innerHTML+=`<div class="log-line ${type}"><span class="icon">${icons[type]||'·'}</span><span class="log-text">${msg}</span></div>`;el.scrollTop=el.scrollHeight}
 function setStep(n){[1,2,3].forEach(i=>{const el=document.getElementById('s'+i);el.className='step'+(i<n?' done':i===n?' active':'')})}
 function tsToDate(ts){if(!ts)return'';return new Date(ts*1000).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function first(a,d=''){return a&&a.length?a[0]:d}
 function parseDays(s){const m=String(s||'').match(/(\d+)/);return m?parseInt(m[1]):7}
 function daysToWeeks(d){return Math.round(d/7)}
 
+async function getAlgoliaKey(){
+  const resp=await fetch(`${BACKEND_URL}/algolia-key`);
+  if(!resp.ok)throw new Error(`Backend HTTP ${resp.status}`);
+  const data=await resp.json();
+  if(data.error)throw new Error(data.error);
+  return data.key;
+}
+
 async function fetchAlgolia(apiKey){
   let page=0,total=null;const hits=[];
   while(true){
     const resp=await fetch(`${ALGOLIA_HOST}/1/indexes/*/queries`,{method:'POST',headers:{'x-algolia-application-id':ALGOLIA_APP_ID,'x-algolia-api-key':apiKey,'Content-Type':'application/json'},body:JSON.stringify({requests:[{indexName:ALGOLIA_INDEX,params:`hitsPerPage=${HITS_PER_PAGE}&page=${page}&query=`}]})});
-    if(resp.status===403)throw new Error('Key abgelaufen oder ungültig (403)');
+    if(resp.status===403)throw new Error('Algolia-Key ungültig (403)');
     if(!resp.ok)throw new Error(`Algolia HTTP ${resp.status}`);
     const data=await resp.json();const result=data.results[0];const batch=result.hits||[];
     hits.push(...batch);if(total===null)total=result.nbHits||0;
@@ -160,48 +153,45 @@ function buildSkipperData(hits){
   return Object.entries(map).sort((a,b)=>b[1].törns-a[1].törns).map(([id,d])=>({id:parseInt(id),...d,status:STAMMSKIPPER[id]?'Stammskipper':d.summerWeeks>5?'Advanced':'Hobby'}));
 }
 
-function cellStyle(bg,bold=false,center=false){return{font:{name:'Arial',sz:bold?11:10,bold:bold,color:{rgb:bold?'FFFFFF':'000000'}},fill:{fgColor:{rgb:bg},patternType:'solid'},alignment:{horizontal:center?'center':'left',vertical:'center',wrapText:bold},border:{top:{style:'thin',color:{rgb:'BFBFBF'}},bottom:{style:'thin',color:{rgb:'BFBFBF'}},left:{style:'thin',color:{rgb:'BFBFBF'}},right:{style:'thin',color:{rgb:'BFBFBF'}}}};}
+function cs(bg,bold=false,center=false){return{font:{name:'Arial',sz:bold?11:10,bold,color:{rgb:bold?'FFFFFF':'000000'}},fill:{fgColor:{rgb:bg},patternType:'solid'},alignment:{horizontal:center?'center':'left',vertical:'center',wrapText:bold},border:{top:{style:'thin',color:{rgb:'BFBFBF'}},bottom:{style:'thin',color:{rgb:'BFBFBF'}},left:{style:'thin',color:{rgb:'BFBFBF'}},right:{style:'thin',color:{rgb:'BFBFBF'}}}}}
 
 function buildExcel(rows,skipperData){
   const wb=XLSX.utils.book_new();
-  // Segelreisen
+  const widths={Startdatum:12,Enddatum:12,Reisename:28,Typ:10,Tage:7,Altersgruppe:13,Skipper:20,'ID Skipper':10,'Plätze gesamt':14,'Plätze belegt':14,Saison:9,'Preisspanne (€)':15,Land:12,Kontinent:11,Anbieter:10,'Trip ID':9,'Trip Date ID':13,'Yacht ID':10,Yachtmodell:22,Yachtname:18,Bootstyp:12,Baujahr:9,'Yacht Status':15,'Skipper Status':22,Flotillenführer:15,Bewerbungen:40};
+  const cm={cancel:'FFCCCC',no_skipper:'B4F7B4',unconfirmed:'FCE4D6'};
   const wsData=[COLUMN_ORDER,...rows.map(r=>COLUMN_ORDER.map(c=>r[c]??''))];
   const ws=XLSX.utils.aoa_to_sheet(wsData);
-  const widths={Startdatum:12,Enddatum:12,Reisename:28,Typ:10,Tage:7,Altersgruppe:13,Skipper:20,'ID Skipper':10,'Plätze gesamt':14,'Plätze belegt':14,Saison:9,'Preisspanne (€)':15,Land:12,Kontinent:11,Anbieter:10,'Trip ID':9,'Trip Date ID':13,'Yacht ID':10,Yachtmodell:22,Yachtname:18,Bootstyp:12,Baujahr:9,'Yacht Status':15,'Skipper Status':22,Flotillenführer:15,Bewerbungen:40};
   ws['!cols']=COLUMN_ORDER.map(c=>({wch:widths[c]||14}));
-  const colorMap={cancel:'FFCCCC',no_skipper:'B4F7B4',unconfirmed:'FCE4D6'};
-  COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws[a])ws[a]={v:COLUMN_ORDER[ci]};ws[a].s=cellStyle('1F4E79',true,true)});
-  rows.forEach((row,ri)=>{const bg=colorMap[row._color]||(ri%2===0?'D6E4F0':'FFFFFF');COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws[a])ws[a]={v:''};ws[a].s=cellStyle(bg)})});
+  COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws[a])ws[a]={v:COLUMN_ORDER[ci]};ws[a].s=cs('1F4E79',true,true)});
+  rows.forEach((row,ri)=>{const bg=cm[row._color]||(ri%2===0?'D6E4F0':'FFFFFF');COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws[a])ws[a]={v:''};ws[a].s=cs(bg)})});
   XLSX.utils.book_append_sheet(wb,ws,'Segelreisen');
-  // Skipper
   const sh=['Skipper','ID','Törns','Wochen','Status'];
+  const sc={Stammskipper:'C6EFCE',Advanced:'FFEB9C',Hobby:'FFFFFF'};
   const ws2=XLSX.utils.aoa_to_sheet([sh,...skipperData.map(d=>[d.name,d.id,d.törns,d.totalWeeks,d.status])]);
   ws2['!cols']=[{wch:24},{wch:10},{wch:8},{wch:9},{wch:16}];
-  const sc={Stammskipper:'C6EFCE',Advanced:'FFEB9C',Hobby:'FFFFFF'};
-  sh.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws2[a])ws2[a]={v:sh[ci]};ws2[a].s=cellStyle('1F4E79',true,true)});
-  skipperData.forEach((d,ri)=>{[d.name,d.id,d.törns,d.totalWeeks,d.status].forEach((val,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws2[a])ws2[a]={v:val};ws2[a].s=cellStyle(ci===4?sc[d.status]||'FFFFFF':ri%2===0?'D6E4F0':'FFFFFF',false,ci>=2&&ci<4)})});
+  sh.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws2[a])ws2[a]={v:sh[ci]};ws2[a].s=cs('1F4E79',true,true)});
+  skipperData.forEach((d,ri)=>{[d.name,d.id,d.törns,d.totalWeeks,d.status].forEach((val,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws2[a])ws2[a]={v:val};ws2[a].s=cs(ci===4?sc[d.status]||'FFFFFF':ri%2===0?'D6E4F0':'FFFFFF',false,ci>=2&&ci<4)})});
   XLSX.utils.book_append_sheet(wb,ws2,'Skipper');
   return wb;
 }
 
 async function startFetch(){
-  const apiKey=document.getElementById('algoliaKey').value.trim();
-  if(!apiKey){alert('Bitte den Algolia API Key eingeben.');return}
-  document.getElementById('cardKey').classList.add('hidden');
+  document.getElementById('cardStart').classList.add('hidden');
   document.getElementById('cardLoad').classList.remove('hidden');
+  document.getElementById('stats').classList.remove('hidden');
   setStep(2);
   try{
-    log('Verbindung zu Algolia …');
+    log('Hole Algolia-Key vom Backend …');
+    const apiKey=await getAlgoliaKey();
+    log('Key erhalten, lade Daten …','ok');
     let hits=await fetchAlgolia(apiKey);
     log(`${hits.length} Treffer geladen`,'ok');
     hits=dedup(hits);
     log(`${hits.length} eindeutige Termine`,'ok');
-    allHits=hits;
     const rows=extractRows(hits);
-    log(`${rows.length} Yacht-Zeilen extrahiert`,'ok');
     document.getElementById('statTermine').textContent=hits.length;
     document.getElementById('statYachten').textContent=rows.length;
-    document.getElementById('stats').classList.remove('hidden');
+    log(`${rows.length} Yacht-Zeilen extrahiert`,'ok');
     log('Excel wird erstellt …');
     window._wb=buildExcel(rows,buildSkipperData(hits));
     log('Fertig!','ok');
@@ -218,10 +208,9 @@ function downloadExcel(){
 
 function resetApp(){
   ['cardLoad','cardDone'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-  document.getElementById('cardKey').classList.remove('hidden');
+  document.getElementById('cardStart').classList.remove('hidden');
   document.getElementById('log').innerHTML='';
-  document.getElementById('stats').classList.add('hidden');
-  setStep(1);allHits=[];window._wb=null;
+  setStep(1);window._wb=null;
 }
 </script>
 </body>
