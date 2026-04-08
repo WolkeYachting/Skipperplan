@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Skipperplan</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{--bg:#0a1628;--surface:#111f38;--card:#162640;--border:#1e3354;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2eaf8;--muted:#5a7399;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--radius:12px}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -67,9 +67,7 @@
     <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
       Lädt automatisch alle aktuellen Törns und erstellt eine fertige Excel-Datei mit Skipper-Auswertung.
     </p>
-    <button class="btn btn-primary" onclick="startFetch()">
-      Jetzt starten
-    </button>
+    <button class="btn btn-primary" onclick="startFetch()">Jetzt starten</button>
   </div>
   <div class="card hidden" id="cardLoad">
     <div class="card-title"><span>📡</span> Daten werden geladen</div>
@@ -86,15 +84,42 @@
   </div>
 </div>
 <script>
-// ── Backend-URL hier eintragen, sobald Render deployed ist ────────────────────
 const BACKEND_URL = 'https://skipperplan-backend.onrender.com';
-
 const ALGOLIA_HOST='https://m6n4q601zw-dsn.algolia.net',ALGOLIA_APP_ID='M6N4Q601ZW',ALGOLIA_INDEX='prod_trip_dates_skipperplan_de',HITS_PER_PAGE=100;
 const STAMMSKIPPER={6429:'Julian S',13707:'Miriam M',2430:'Gregor K',13035:'Nicole M',951:'Martin S',14111:'Leon H',17277:'David H',28325:'Adam B',7022:'Mareike W',20147:'Yanik K',6896:'Malte W',9724:'Luke W',6758:'Marc L',347:'Mario L',9375:'Clemens P'};
 const COLUMN_ORDER=['Startdatum','Enddatum','Reisename','Typ','Tage','Altersgruppe','Skipper','ID Skipper','Plätze gesamt','Plätze belegt','Saison','Preisspanne (€)','Land','Kontinent','Anbieter','Trip ID','Trip Date ID','Yacht ID','Yachtmodell','Yachtname','Bootstyp','Baujahr','Yacht Status','Skipper Status','Flotillenführer','Bewerbungen'];
 const SK_LABELS={'confirmed_by_admin_and_skipper':'Bestätigt','confirmed_by_admin':'Vom Admin bestätigt','assigned':'Zugeteilt (offen)'};
 
-function log(msg,type='info'){const icons={ok:'✓',err:'✗',info:'·'};const el=document.getElementById('log');el.innerHTML+=`<div class="log-line ${type}"><span class="icon">${icons[type]||'·'}</span><span class="log-text">${msg}</span></div>`;el.scrollTop=el.scrollHeight}
+// ── Farben ────────────────────────────────────────────────────────────────────
+const C = {
+  header:      { argb: 'FF1F4E79' },
+  rowA:        { argb: 'FFD6E4F0' },
+  rowB:        { argb: 'FFFFFFFF' },
+  noSkipper:   { argb: 'FFB4F7B4' },
+  cancel:      { argb: 'FFFFCCCC' },
+  unconfirmed: { argb: 'FFFCE4D6' },
+  stamm:       { argb: 'FFC6EFCE' },
+  advanced:    { argb: 'FFFFEB9C' },
+  white:       { argb: 'FFFFFFFF' },
+  fontWhite:   { argb: 'FFFFFFFF' },
+  fontBlack:   { argb: 'FF000000' },
+  border:      { argb: 'FFBFBFBF' },
+};
+
+const COL_WIDTHS = {
+  'Startdatum':12,'Enddatum':12,'Reisename':28,'Typ':10,'Tage':7,'Altersgruppe':13,
+  'Skipper':20,'ID Skipper':10,'Plätze gesamt':14,'Plätze belegt':14,'Saison':9,
+  'Preisspanne (€)':15,'Land':12,'Kontinent':11,'Anbieter':10,'Trip ID':9,
+  'Trip Date ID':13,'Yacht ID':10,'Yachtmodell':22,'Yachtname':18,'Bootstyp':12,
+  'Baujahr':9,'Yacht Status':15,'Skipper Status':22,'Flotillenführer':15,'Bewerbungen':40
+};
+
+function log(msg,type='info'){
+  const icons={ok:'✓',err:'✗',info:'·'};
+  const el=document.getElementById('log');
+  el.innerHTML+=`<div class="log-line ${type}"><span class="icon">${icons[type]||'·'}</span><span class="log-text">${msg}</span></div>`;
+  el.scrollTop=el.scrollHeight;
+}
 function setStep(n){[1,2,3].forEach(i=>{const el=document.getElementById('s'+i);el.className='step'+(i<n?' done':i===n?' active':'')})}
 function tsToDate(ts){if(!ts)return'';return new Date(ts*1000).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function first(a,d=''){return a&&a.length?a[0]:d}
@@ -136,7 +161,9 @@ function extractRows(hits){
     (h.yachts||[]).forEach((y,i)=>{
       const sk=y.skipper||{},ss=sk.status||'',sn=sk.name||'',ys=y.status||'';
       let rc=null;
-      if(ys==='should_be_canceled')rc='cancel';else if(!sn)rc='no_skipper';else if(ss==='assigned')rc='unconfirmed';
+      if(ys==='should_be_canceled')rc='cancel';
+      else if(!sn)rc='noSkipper';
+      else if(ss==='assigned')rc='unconfirmed';
       rows.push({...ti,'Skipper':sn||'⚠ Kein Skipper','ID Skipper':sk.id||'','Plätze gesamt':y.places||'','Plätze belegt':y.occupied_places||'','Yacht ID':y.id||'','Yachtmodell':y.accomodation_details_name||'','Yachtname':y.yacht_name||'','Bootstyp':y.accomodation_details_type||'','Baujahr':y.yacht_year||'','Yacht Status':ys==='should_be_canceled'?'Zu stornieren':'Bestätigt','Skipper Status':SK_LABELS[ss]||ss||'—','Flotillenführer':sk.is_flotilla_leader?'Ja':'Nein','Bewerbungen':i===0?proposals.join(', '):'','_color':rc});
     });
   }
@@ -148,30 +175,95 @@ function buildSkipperData(hits){
   for(const h of hits){
     const weeks=daysToWeeks(parseDays(first(h.trip_days||[])));
     const summer=(first(h.season||'')||'').toLowerCase()==='summer';
-    for(const y of(h.yachts||[])){const sk=y.skipper||{};if(!sk.id||!sk.name)continue;if(!map[sk.id])map[sk.id]={name:sk.name,törns:0,totalWeeks:0,summerWeeks:0};map[sk.id].törns++;map[sk.id].totalWeeks+=weeks;if(summer)map[sk.id].summerWeeks+=weeks;}
+    for(const y of(h.yachts||[])){
+      const sk=y.skipper||{};
+      if(!sk.id||!sk.name)continue;
+      if(!map[sk.id])map[sk.id]={name:sk.name,törns:0,totalWeeks:0,summerWeeks:0};
+      map[sk.id].törns++;map[sk.id].totalWeeks+=weeks;
+      if(summer)map[sk.id].summerWeeks+=weeks;
+    }
   }
   return Object.entries(map).sort((a,b)=>b[1].törns-a[1].törns).map(([id,d])=>({id:parseInt(id),...d,status:STAMMSKIPPER[id]?'Stammskipper':d.summerWeeks>5?'Advanced':'Hobby'}));
 }
 
-function cs(bg,bold=false,center=false){return{font:{name:'Arial',sz:bold?11:10,bold,color:{rgb:bold?'FFFFFF':'000000'}},fill:{fgColor:{rgb:bg},patternType:'solid'},alignment:{horizontal:center?'center':'left',vertical:'center',wrapText:bold},border:{top:{style:'thin',color:{rgb:'BFBFBF'}},bottom:{style:'thin',color:{rgb:'BFBFBF'}},left:{style:'thin',color:{rgb:'BFBFBF'}},right:{style:'thin',color:{rgb:'BFBFBF'}}}}}
+// ── ExcelJS Hilfsfunktionen ───────────────────────────────────────────────────
+function borderStyle(){
+  const s={style:'thin',color:C.border};
+  return{top:s,bottom:s,left:s,right:s};
+}
 
-function buildExcel(rows,skipperData){
-  const wb=XLSX.utils.book_new();
-  const widths={Startdatum:12,Enddatum:12,Reisename:28,Typ:10,Tage:7,Altersgruppe:13,Skipper:20,'ID Skipper':10,'Plätze gesamt':14,'Plätze belegt':14,Saison:9,'Preisspanne (€)':15,Land:12,Kontinent:11,Anbieter:10,'Trip ID':9,'Trip Date ID':13,'Yacht ID':10,Yachtmodell:22,Yachtname:18,Bootstyp:12,Baujahr:9,'Yacht Status':15,'Skipper Status':22,Flotillenführer:15,Bewerbungen:40};
-  const cm={cancel:'FFCCCC',no_skipper:'B4F7B4',unconfirmed:'FCE4D6'};
-  const wsData=[COLUMN_ORDER,...rows.map(r=>COLUMN_ORDER.map(c=>r[c]??''))];
-  const ws=XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols']=COLUMN_ORDER.map(c=>({wch:widths[c]||14}));
-  COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws[a])ws[a]={v:COLUMN_ORDER[ci]};ws[a].s=cs('1F4E79',true,true)});
-  rows.forEach((row,ri)=>{const bg=cm[row._color]||(ri%2===0?'D6E4F0':'FFFFFF');COLUMN_ORDER.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws[a])ws[a]={v:''};ws[a].s=cs(bg)})});
-  XLSX.utils.book_append_sheet(wb,ws,'Segelreisen');
-  const sh=['Skipper','ID','Törns','Wochen','Status'];
-  const sc={Stammskipper:'C6EFCE',Advanced:'FFEB9C',Hobby:'FFFFFF'};
-  const ws2=XLSX.utils.aoa_to_sheet([sh,...skipperData.map(d=>[d.name,d.id,d.törns,d.totalWeeks,d.status])]);
-  ws2['!cols']=[{wch:24},{wch:10},{wch:8},{wch:9},{wch:16}];
-  sh.forEach((_,ci)=>{const a=XLSX.utils.encode_cell({r:0,c:ci});if(!ws2[a])ws2[a]={v:sh[ci]};ws2[a].s=cs('1F4E79',true,true)});
-  skipperData.forEach((d,ri)=>{[d.name,d.id,d.törns,d.totalWeeks,d.status].forEach((val,ci)=>{const a=XLSX.utils.encode_cell({r:ri+1,c:ci});if(!ws2[a])ws2[a]={v:val};ws2[a].s=cs(ci===4?sc[d.status]||'FFFFFF':ri%2===0?'D6E4F0':'FFFFFF',false,ci>=2&&ci<4)})});
-  XLSX.utils.book_append_sheet(wb,ws2,'Skipper');
+function applyHeader(row){
+  row.height=36;
+  row.eachCell(cell=>{
+    cell.font={name:'Arial',size:11,bold:true,color:C.fontWhite};
+    cell.fill={type:'pattern',pattern:'solid',fgColor:C.header};
+    cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    cell.border=borderStyle();
+  });
+}
+
+function applyDataCell(cell, bgColor){
+  cell.font={name:'Arial',size:10,color:C.fontBlack};
+  cell.fill={type:'pattern',pattern:'solid',fgColor:bgColor};
+  cell.alignment={horizontal:'left',vertical:'middle'};
+  cell.border=borderStyle();
+}
+
+async function buildExcel(rows, skipperData){
+  const wb = new ExcelJS.Workbook();
+
+  // ── Segelreisen ───────────────────────────────────────────────────────────
+  const ws = wb.addWorksheet('Segelreisen');
+  ws.columns = COLUMN_ORDER.map(c=>({header:c, key:c, width:COL_WIDTHS[c]||14}));
+  applyHeader(ws.getRow(1));
+  ws.views=[{state:'frozen',ySplit:1}];
+  ws.autoFilter={from:'A1',to:{row:1,column:COLUMN_ORDER.length}};
+
+  const rowColorMap={cancel:C.cancel,noSkipper:C.noSkipper,unconfirmed:C.unconfirmed};
+
+  rows.forEach((row,ri)=>{
+    const exRow=ws.addRow(COLUMN_ORDER.map(c=>row[c]??''));
+    const bg=rowColorMap[row._color]||(ri%2===0?C.rowA:C.rowB);
+    exRow.eachCell(cell=>applyDataCell(cell,bg));
+  });
+
+  // ── Skipper ───────────────────────────────────────────────────────────────
+  const ws2=wb.addWorksheet('Skipper');
+  ws2.columns=[
+    {header:'Skipper',  key:'name',        width:24},
+    {header:'ID',       key:'id',          width:10},
+    {header:'Törns',    key:'törns',        width:8},
+    {header:'Wochen',   key:'totalWeeks',  width:9},
+    {header:'Status',   key:'status',      width:16},
+  ];
+  applyHeader(ws2.getRow(1));
+  ws2.views=[{state:'frozen',ySplit:1}];
+  ws2.autoFilter={from:'A1',to:'E1'};
+
+  const statusColors={Stammskipper:C.stamm,Advanced:C.advanced,Hobby:C.white};
+
+  skipperData.forEach((d,ri)=>{
+    const exRow=ws2.addRow([d.name,d.id,d.törns,d.totalWeeks,d.status]);
+    const defaultBg=ri%2===0?C.rowA:C.rowB;
+    exRow.eachCell((cell,cn)=>{
+      const bg=cn===5?(statusColors[d.status]||C.white):defaultBg;
+      applyDataCell(cell,bg);
+      if(cn>=3&&cn<=4)cell.alignment={horizontal:'center',vertical:'middle'};
+    });
+  });
+
+  // Legende
+  ws2.getCell('G1').value='Legende';
+  ws2.getCell('G1').font={name:'Arial',bold:true,size:11};
+  [['G2','Stammskipper',C.stamm],['G3','Advanced (> 5 Wochen Sommer)',C.advanced],['G4','Hobby (≤ 5 Wochen Sommer)',C.white]].forEach(([addr,label,bg])=>{
+    const cell=ws2.getCell(addr);
+    cell.value=label;
+    cell.fill={type:'pattern',pattern:'solid',fgColor:bg};
+    cell.font={name:'Arial',size:10};
+    cell.border=borderStyle();
+  });
+  ws2.getColumn('G').width=32;
+
   return wb;
 }
 
@@ -193,17 +285,22 @@ async function startFetch(){
     document.getElementById('statYachten').textContent=rows.length;
     log(`${rows.length} Yacht-Zeilen extrahiert`,'ok');
     log('Excel wird erstellt …');
-    window._wb=buildExcel(rows,buildSkipperData(hits));
+    window._wb=await buildExcel(rows,buildSkipperData(hits));
     log('Fertig!','ok');
     setStep(3);
     document.getElementById('cardDone').classList.remove('hidden');
   }catch(e){log(`Fehler: ${e.message}`,'err')}
 }
 
-function downloadExcel(){
+async function downloadExcel(){
   if(!window._wb)return;
   const d=new Date().toISOString().slice(0,10);
-  XLSX.writeFile(window._wb,`skipperplan_${d}.xlsx`);
+  const buf=await window._wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`skipperplan_${d}.xlsx`;a.click();
+  URL.revokeObjectURL(url);
 }
 
 function resetApp(){
