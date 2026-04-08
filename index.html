@@ -59,9 +59,12 @@
 
   <div class="card" id="cardStart">
     <div class="card-title"><span>⛵</span> Skipperplan abrufen</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-      Lädt automatisch alle aktuellen Törns vom Server und erstellt eine fertige Excel-Datei – inklusive Farbgebung und Skipper-Auswertung.
-    </p>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase">Passwort</label>
+      <input type="password" id="appPassword" placeholder="••••••••"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 12px;outline:none;-webkit-appearance:none"
+        onkeydown="if(event.key==='Enter')startDownload()">
+    </div>
     <button class="btn btn-primary" id="btnStart" onclick="startDownload()">
       Excel erstellen &amp; herunterladen
     </button>
@@ -83,7 +86,7 @@
 
 <script>
 // ── Backend-URL hier eintragen ────────────────────────────────────────────────
-const BACKEND_URL = 'https://skipperplan-backend.onrender.com';
+const BACKEND_URL = 'https://DEINE-APP.onrender.com';
 
 function log(msg, type='info'){
   const icons={ok:'✓',err:'✗',info:'·'};
@@ -100,6 +103,9 @@ function setStep(n){
 }
 
 async function startDownload(){
+  const password = document.getElementById('appPassword').value;
+  if(!password){ alert('Bitte Passwort eingeben.'); return; }
+
   document.getElementById('cardStart').classList.add('hidden');
   document.getElementById('cardLoad').classList.remove('hidden');
   setStep(2);
@@ -108,10 +114,20 @@ async function startDownload(){
     log('Verbinde mit Server …');
     log('Daten werden geladen und Excel erstellt – das kann 20–30 Sekunden dauern …');
 
-    const resp = await fetch(`${BACKEND_URL}/download`);
+    const url  = `${BACKEND_URL}/download?password=${encodeURIComponent(password)}`;
+    const resp = await fetch(url);
 
     if(!resp.ok){
       const err = await resp.json().catch(()=>({error:`HTTP ${resp.status}`}));
+      if(resp.status === 401){
+        // Falsches Passwort → zurück zum Eingabefeld
+        document.getElementById('cardLoad').classList.add('hidden');
+        document.getElementById('cardStart').classList.remove('hidden');
+        document.getElementById('log').innerHTML='';
+        setStep(1);
+        alert('Falsches Passwort – bitte erneut versuchen.');
+        return;
+      }
       throw new Error(err.error || `HTTP ${resp.status}`);
     }
 
