@@ -72,6 +72,9 @@
 
   <div class="card hidden" id="cardLoad">
     <div class="card-title"><span>📡</span> Wird erstellt …</div>
+    <div id="wakeMsg" style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;padding:10px 12px;background:rgba(59,130,246,.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0">
+      ⏳ Server wird gestartet – das kann beim ersten Aufruf <strong style="color:var(--text)">bis zu 30 Sekunden</strong> dauern …
+    </div>
     <div class="log" id="log"></div>
   </div>
 
@@ -108,7 +111,12 @@ async function startDownload(){
 
   const btn = document.getElementById('btnStart');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
+  btn.innerHTML = '<div class="spinner"></div> Verbinde …';
+
+  // Sofort Ladeansicht zeigen – noch vor dem Server-Request
+  document.getElementById('cardStart').classList.add('hidden');
+  document.getElementById('cardLoad').classList.remove('hidden');
+  setStep(2);
 
   try {
     // 1. Passwort schnell prüfen
@@ -116,22 +124,27 @@ async function startDownload(){
     try {
       checkResp = await fetch(`${BACKEND_URL}/check?password=${encodeURIComponent(password)}`);
     } catch(networkErr) {
+      document.getElementById('cardLoad').classList.add('hidden');
+      document.getElementById('cardStart').classList.remove('hidden');
       btn.disabled = false;
       btn.innerHTML = 'Excel erstellen &amp; herunterladen';
-      alert(`❌ Server nicht erreichbar – ist die BACKEND_URL korrekt?\n(${BACKEND_URL})`);
+      setStep(1);
+      alert(`❌ Server nicht erreichbar.\n(${BACKEND_URL})`);
       return;
     }
+
     if(checkResp.status === 401){
+      document.getElementById('cardLoad').classList.add('hidden');
+      document.getElementById('cardStart').classList.remove('hidden');
       btn.disabled = false;
       btn.innerHTML = 'Excel erstellen &amp; herunterladen';
+      document.getElementById('log').innerHTML = '';
+      setStep(1);
       alert('❌ Falsches Passwort – bitte erneut versuchen.');
       return;
     }
 
-    // 2. Passwort ok → Lade-Ansicht zeigen
-    document.getElementById('cardStart').classList.add('hidden');
-    document.getElementById('cardLoad').classList.remove('hidden');
-    setStep(2);
+    document.getElementById('wakeMsg').classList.add('hidden');
     log('✅ Passwort akzeptiert');
     log('🔐 Login bei join-the-crew …');
 
