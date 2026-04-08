@@ -106,32 +106,44 @@ async function startDownload(){
   const password = document.getElementById('appPassword').value;
   if(!password){ alert('Bitte Passwort eingeben.'); return; }
 
-  document.getElementById('cardStart').classList.add('hidden');
-  document.getElementById('cardLoad').classList.remove('hidden');
-  setStep(2);
+  const btn = document.getElementById('btnStart');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
 
   try {
-    log('Verbinde mit Server …');
-    log('Daten werden geladen und Excel erstellt – das kann 20–30 Sekunden dauern …');
+    // 1. Passwort schnell prüfen
+    let checkResp;
+    try {
+      checkResp = await fetch(`${BACKEND_URL}/check?password=${encodeURIComponent(password)}`);
+    } catch(networkErr) {
+      btn.disabled = false;
+      btn.innerHTML = 'Excel erstellen &amp; herunterladen';
+      alert(`❌ Server nicht erreichbar – ist die BACKEND_URL korrekt?\n(${BACKEND_URL})`);
+      return;
+    }
+    if(checkResp.status === 401){
+      btn.disabled = false;
+      btn.innerHTML = 'Excel erstellen &amp; herunterladen';
+      alert('❌ Falsches Passwort – bitte erneut versuchen.');
+      return;
+    }
 
-    const url  = `${BACKEND_URL}/download?password=${encodeURIComponent(password)}`;
-    const resp = await fetch(url);
+    // 2. Passwort ok → Lade-Ansicht zeigen
+    document.getElementById('cardStart').classList.add('hidden');
+    document.getElementById('cardLoad').classList.remove('hidden');
+    setStep(2);
+    log('✅ Passwort akzeptiert');
+    log('🔐 Login bei join-the-crew …');
 
+    // 3. Excel anfordern
+    const resp = await fetch(`${BACKEND_URL}/download?password=${encodeURIComponent(password)}`);
     if(!resp.ok){
       const err = await resp.json().catch(()=>({error:`HTTP ${resp.status}`}));
-      if(resp.status === 401){
-        // Falsches Passwort → zurück zum Eingabefeld
-        document.getElementById('cardLoad').classList.add('hidden');
-        document.getElementById('cardStart').classList.remove('hidden');
-        document.getElementById('log').innerHTML='';
-        setStep(1);
-        alert('Falsches Passwort – bitte erneut versuchen.');
-        return;
-      }
       throw new Error(err.error || `HTTP ${resp.status}`);
     }
 
-    log('Excel empfangen, Download startet …', 'ok');
+    log('📦 Daten von Algolia geladen');
+    log('📊 Excel wird erstellt …');
 
     const blob = await resp.blob();
     const url  = URL.createObjectURL(blob);
@@ -142,12 +154,14 @@ async function startDownload(){
     a.click();
     URL.revokeObjectURL(url);
 
-    log('Fertig!', 'ok');
+    log('✅ Fertig – Download gestartet!', 'ok');
     setStep(3);
     document.getElementById('cardDone').classList.remove('hidden');
 
   } catch(e) {
-    log(`Fehler: ${e.message}`, 'err');
+    log(`❌ Fehler: ${e.message}`, 'err');
+    btn.disabled = false;
+    btn.innerHTML = 'Excel erstellen &amp; herunterladen';
   }
 }
 
