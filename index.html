@@ -8,7 +8,7 @@
 <title>Skipperplan</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0a1628;--surface:#111f38;--card:#162640;--border:#1e3354;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2eaf8;--muted:#5a7399;--success:#22c55e;--danger:#ef4444;--radius:12px}
+  :root{--bg:#0a1628;--surface:#111f38;--card:#162640;--border:#1e3354;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2eaf8;--muted:#5a7399;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--radius:12px}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
@@ -24,13 +24,18 @@
   .btn-primary{background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.35)}
   .btn-primary:active{transform:scale(.97);box-shadow:none}
   .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-secondary{background:linear-gradient(135deg,#1e3a5f,#162d4a);color:var(--text);border:1px solid var(--border);margin-top:10px}
+  .btn-secondary:active{transform:scale(.97)}
+  .btn-secondary:disabled{opacity:.5;cursor:not-allowed;transform:none}
   .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:9px;margin-top:8px}
   .btn-outline:active{background:var(--surface)}
   .steps{display:flex;gap:6px;margin-bottom:24px}
   .step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .4s}
   .step.active{background:var(--accent)}
   .step.done{background:var(--success)}
-  .log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;line-height:1.7;max-height:220px;overflow-y:auto;margin-top:14px}
+  .timestamp{font-size:11px;color:var(--muted);margin-bottom:14px}
+  .timestamp strong{color:var(--text)}
+  .log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;line-height:1.8;margin-top:14px}
   .log-line{display:flex;gap:8px}
   .log-line.ok .icon{color:var(--success)}
   .log-line.err .icon{color:var(--danger)}
@@ -38,7 +43,7 @@
   .log-text{color:var(--text);word-break:break-all}
   .hidden{display:none!important}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 </style>
 </head>
@@ -48,43 +53,77 @@
     <div class="logo">⛵</div>
     <div class="header-text">
       <h1>Skipperplan</h1>
-      <p>join-the-crew · Excel Export</p>
+      <p>Flotilla Management</p>
     </div>
   </div>
+
   <div class="steps">
     <div class="step active" id="s1"></div>
     <div class="step" id="s2"></div>
     <div class="step" id="s3"></div>
   </div>
 
+  <!-- Karte 1: Download -->
   <div class="card" id="cardStart">
-    <div class="card-title"><span>⛵</span> Skipperplan herunterladen</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-      Die Excel-Datei wird täglich automatisch um 06:00 Uhr aktualisiert.
-    </p>
+    <div class="card-title"><span>📥</span> Skipperplan herunterladen</div>
+    <div class="timestamp" id="timestamp">Zuletzt aktualisiert: wird geladen …</div>
+
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase">Passwort</label>
       <input type="password" id="appPassword" placeholder="••••••••"
         style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 12px;outline:none;-webkit-appearance:none"
         onkeydown="if(event.key==='Enter')startDownload()">
     </div>
-    <button class="btn btn-primary" id="btnStart" onclick="startDownload()">
+
+    <button class="btn btn-primary" id="btnDownload" onclick="startDownload()">
       Excel herunterladen
+    </button>
+    <button class="btn btn-secondary" id="btnRefresh" onclick="startRefresh()">
+      🔄 Jetzt aktualisieren
     </button>
   </div>
 
+  <!-- Karte 2: Aktualisierung läuft -->
+  <div class="card hidden" id="cardRefresh">
+    <div class="card-title"><span>🔄</span> Wird aktualisiert …</div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- Karte 3: Fertig -->
   <div class="card hidden" id="cardDone">
-    <div class="card-title"><span>✅</span> Heruntergeladen</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-      Stand: täglich 06:00 Uhr. Für eine sofortige Aktualisierung den Workflow manuell in GitHub Actions starten.
-    </p>
-    <button class="btn btn-outline" onclick="resetApp()">Erneut herunterladen</button>
+    <div class="card-title"><span>✅</span> Fertig</div>
+    <button class="btn btn-outline" onclick="resetApp()">Zurück</button>
   </div>
 </div>
 
 <script>
-// ── Backend-URL hier eintragen ────────────────────────────────────────────────
-const BACKEND_URL = 'https://DEINE-APP.onrender.com';
+const BACKEND_URL   = 'https://skipperplan-backend.onrender.com';
+const GITHUB_RAW    = 'https://raw.githubusercontent.com/wolkeyachting/Skipperplan/main';
+const PASSWORD_HASH = '7bceca6824c799e3534f015b64d480ede43a40539dd970d3ea6476fe974fa73e';
+
+// ── Zeitstempel aus GitHub API laden ─────────────────────────────────────────
+async function loadTimestamp(){
+  try {
+    const resp = await fetch('https://api.github.com/repos/wolkeyachting/Skipperplan/commits?path=skipperplan.xlsx&per_page=1');
+    if(!resp.ok) return;
+    const data = await resp.json();
+    if(data[0]){
+      const msg  = data[0].commit.message;
+      const date = new Date(data[0].commit.committer.date);
+      const str  = date.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC';
+      document.getElementById('timestamp').innerHTML = `Zuletzt aktualisiert: <strong>${str}</strong>`;
+    }
+  } catch(e) {
+    document.getElementById('timestamp').textContent = 'Zuletzt aktualisiert: unbekannt';
+  }
+}
+
+// ── Passwort-Hash prüfen ──────────────────────────────────────────────────────
+async function checkPassword(pw){
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  const hash = [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return hash === PASSWORD_HASH;
+}
 
 function log(msg, type='info'){
   const icons={ok:'✓',err:'✗',info:'·'};
@@ -95,37 +134,24 @@ function log(msg, type='info'){
 
 function setStep(n){
   [1,2,3].forEach(i=>{
-    const el=document.getElementById('s'+i);
-    el.className='step'+(i<n?' done':i===n?' active':'');
+    document.getElementById('s'+i).className='step'+(i<n?' done':i===n?' active':'');
   });
 }
 
-// ── Passwortprüfung lokal per SHA-256 Hash ────────────────────────────────────
-// Hash des Passworts hier eintragen (nie das Passwort selbst):
-// In der Browser-Konsole erzeugen mit:
-//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('DeinPasswort'))
-//     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-const PASSWORD_HASH = '7bceca6824c799e3534f015b64d480ede43a40539dd970d3ea6476fe974fa73e';
-
-async function checkPassword(password) {
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-  const hash = [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
-  return hash === PASSWORD_HASH;
-}
-
+// ── Download ──────────────────────────────────────────────────────────────────
 async function startDownload(){
-  const password = document.getElementById('appPassword').value;
-  if(!password){ alert('Bitte Passwort eingeben.'); return; }
+  const pw = document.getElementById('appPassword').value;
+  if(!pw){ alert('Bitte Passwort eingeben.'); return; }
 
-  const btn = document.getElementById('btnStart');
+  const btn = document.getElementById('btnDownload');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
 
-  const ok = await checkPassword(password);
+  const ok = await checkPassword(pw);
   if(!ok){
     btn.disabled = false;
     btn.innerHTML = 'Excel herunterladen';
-    alert('❌ Falsches Passwort – bitte erneut versuchen.');
+    alert('❌ Falsches Passwort.');
     return;
   }
 
@@ -140,13 +166,58 @@ async function startDownload(){
   btn.innerHTML = 'Excel herunterladen';
   setStep(3);
   document.getElementById('cardDone').classList.remove('hidden');
+  document.getElementById('cardStart').classList.add('hidden');
+}
+
+// ── Aktualisieren ─────────────────────────────────────────────────────────────
+async function startRefresh(){
+  const pw = document.getElementById('appPassword').value;
+  if(!pw){ alert('Bitte Passwort eingeben.'); return; }
+
+  const ok = await checkPassword(pw);
+  if(!ok){ alert('❌ Falsches Passwort.'); return; }
+
+  document.getElementById('cardStart').classList.add('hidden');
+  document.getElementById('cardRefresh').classList.remove('hidden');
+  setStep(2);
+
+  log('Verbindung wird aufgebaut …');
+  log('Daten werden abgerufen – bitte warten …');
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/refresh`);
+    const data = await resp.json();
+
+    if(!resp.ok || data.error){
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+
+    log(`Daten abgerufen: ${data.termine} Termine, ${data.yachten} Yachten`, 'ok');
+    log('Excel erstellt und gespeichert', 'ok');
+    log(`Aktualisiert: ${data.updated}`, 'ok');
+
+    // Zeitstempel neu laden
+    await loadTimestamp();
+
+    setStep(3);
+    document.getElementById('cardRefresh').classList.add('hidden');
+    document.getElementById('cardDone').classList.remove('hidden');
+
+  } catch(e){
+    log(`Fehler: ${e.message}`, 'err');
+    log('Tipp: Der Server braucht beim ersten Aufruf bis zu 30 Sek. – bitte erneut versuchen.', 'info');
+  }
 }
 
 function resetApp(){
-  document.getElementById('cardDone').classList.add('hidden');
+  ['cardRefresh','cardDone'].forEach(id=>document.getElementById(id).classList.add('hidden'));
   document.getElementById('cardStart').classList.remove('hidden');
+  document.getElementById('log').innerHTML='';
   setStep(1);
 }
+
+// Zeitstempel beim Laden der Seite abrufen
+loadTimestamp();
 </script>
 </body>
 </html>
