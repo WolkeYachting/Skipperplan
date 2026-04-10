@@ -100,6 +100,19 @@ function setStep(n){
   });
 }
 
+// ── Passwortprüfung lokal per SHA-256 Hash ────────────────────────────────────
+// Hash des Passworts hier eintragen (nie das Passwort selbst):
+// In der Browser-Konsole erzeugen mit:
+//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('DeinPasswort'))
+//     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+const PASSWORD_HASH = '7bceca6824c799e3534f015b64d480ede43a40539dd970d3ea6476fe974fa73e';
+
+async function checkPassword(password) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  const hash = [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+  return hash === PASSWORD_HASH;
+}
+
 async function startDownload(){
   const password = document.getElementById('appPassword').value;
   if(!password){ alert('Bitte Passwort eingeben.'); return; }
@@ -108,43 +121,25 @@ async function startDownload(){
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
 
-  try {
-    // Passwort prüfen
-    let checkResp;
-    try {
-      checkResp = await fetch(`${BACKEND_URL}/check?password=${encodeURIComponent(password)}`);
-    } catch(e) {
-      btn.disabled = false;
-      btn.innerHTML = 'Excel herunterladen';
-      alert('❌ Server nicht erreichbar – bitte kurz warten und erneut versuchen.');
-      return;
-    }
-
-    if(checkResp.status === 401){
-      btn.disabled = false;
-      btn.innerHTML = 'Excel herunterladen';
-      alert('❌ Falsches Passwort – bitte erneut versuchen.');
-      return;
-    }
-
-    // Passwort ok → Excel direkt aus dem Repository herunterladen
-    btn.innerHTML = '<div class="spinner"></div> Wird heruntergeladen …';
-    const date = new Date().toISOString().slice(0,10);
-    const a    = document.createElement('a');
-    a.href     = 'skipperplan.xlsx';
-    a.download = `skipperplan_${date}.xlsx`;
-    a.click();
-
+  const ok = await checkPassword(password);
+  if(!ok){
     btn.disabled = false;
     btn.innerHTML = 'Excel herunterladen';
-    setStep(3);
-    document.getElementById('cardDone').classList.remove('hidden');
-
-  } catch(e) {
-    btn.disabled = false;
-    btn.innerHTML = 'Excel herunterladen';
-    alert(`❌ Fehler: ${e.message}`);
+    alert('❌ Falsches Passwort – bitte erneut versuchen.');
+    return;
   }
+
+  btn.innerHTML = '<div class="spinner"></div> Wird heruntergeladen …';
+  const date = new Date().toISOString().slice(0,10);
+  const a    = document.createElement('a');
+  a.href     = 'skipperplan.xlsx';
+  a.download = `skipperplan_${date}.xlsx`;
+  a.click();
+
+  btn.disabled = false;
+  btn.innerHTML = 'Excel herunterladen';
+  setStep(3);
+  document.getElementById('cardDone').classList.remove('hidden');
 }
 
 function resetApp(){
