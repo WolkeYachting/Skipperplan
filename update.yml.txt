@@ -2,7 +2,7 @@ name: Skipperplan täglich aktualisieren
 
 on:
   schedule:
-    - cron: '0 5 * * *'   # Jeden Tag um 06:00 Uhr deutscher Zeit (05:00 UTC)
+    - cron: '0 1 * * *'   # Jeden Tag um 06:00 Uhr deutscher Zeit (05:00 UTC)
   workflow_dispatch:        # Auch manuell auslösbar über GitHub UI
 
 jobs:
