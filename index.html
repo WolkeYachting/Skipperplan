@@ -58,7 +58,10 @@
   </div>
 
   <div class="card" id="cardStart">
-    <div class="card-title"><span>⛵</span> Skipperplan abrufen</div>
+    <div class="card-title"><span>⛵</span> Skipperplan herunterladen</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+      Die Excel-Datei wird täglich automatisch um 06:00 Uhr aktualisiert.
+    </p>
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase">Passwort</label>
       <input type="password" id="appPassword" placeholder="••••••••"
@@ -66,30 +69,22 @@
         onkeydown="if(event.key==='Enter')startDownload()">
     </div>
     <button class="btn btn-primary" id="btnStart" onclick="startDownload()">
-      Excel erstellen &amp; herunterladen
+      Excel herunterladen
     </button>
   </div>
 
-  <div class="card hidden" id="cardLoad">
-    <div class="card-title"><span>📡</span> Wird erstellt …</div>
-    <div id="wakeMsg" style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;padding:10px 12px;background:rgba(59,130,246,.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0">
-      ⏳ Server wird gestartet – das kann beim ersten Aufruf <strong style="color:var(--text)">bis zu 30 Sekunden</strong> dauern …
-    </div>
-    <div class="log" id="log"></div>
-  </div>
-
   <div class="card hidden" id="cardDone">
-    <div class="card-title"><span>✅</span> Fertig</div>
+    <div class="card-title"><span>✅</span> Heruntergeladen</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-      Die Excel-Datei wurde heruntergeladen.
+      Stand: täglich 06:00 Uhr. Für eine sofortige Aktualisierung den Workflow manuell in GitHub Actions starten.
     </p>
-    <button class="btn btn-outline" onclick="resetApp()">Erneut erstellen</button>
+    <button class="btn btn-outline" onclick="resetApp()">Erneut herunterladen</button>
   </div>
 </div>
 
 <script>
 // ── Backend-URL hier eintragen ────────────────────────────────────────────────
-const BACKEND_URL = 'https://skipperplan-backend.onrender.com';
+const BACKEND_URL = 'https://DEINE-APP.onrender.com';
 
 function log(msg, type='info'){
   const icons={ok:'✓',err:'✗',info:'·'};
@@ -111,77 +106,50 @@ async function startDownload(){
 
   const btn = document.getElementById('btnStart');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Verbinde …';
-
-  // Sofort Ladeansicht zeigen – noch vor dem Server-Request
-  document.getElementById('cardStart').classList.add('hidden');
-  document.getElementById('cardLoad').classList.remove('hidden');
-  setStep(2);
+  btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
 
   try {
-    // 1. Passwort schnell prüfen
+    // Passwort prüfen
     let checkResp;
     try {
       checkResp = await fetch(`${BACKEND_URL}/check?password=${encodeURIComponent(password)}`);
-    } catch(networkErr) {
-      document.getElementById('cardLoad').classList.add('hidden');
-      document.getElementById('cardStart').classList.remove('hidden');
+    } catch(e) {
       btn.disabled = false;
-      btn.innerHTML = 'Excel erstellen &amp; herunterladen';
-      setStep(1);
-      alert(`❌ Server nicht erreichbar.\n(${BACKEND_URL})`);
+      btn.innerHTML = 'Excel herunterladen';
+      alert('❌ Server nicht erreichbar – bitte kurz warten und erneut versuchen.');
       return;
     }
 
     if(checkResp.status === 401){
-      document.getElementById('cardLoad').classList.add('hidden');
-      document.getElementById('cardStart').classList.remove('hidden');
       btn.disabled = false;
-      btn.innerHTML = 'Excel erstellen &amp; herunterladen';
-      document.getElementById('log').innerHTML = '';
-      setStep(1);
+      btn.innerHTML = 'Excel herunterladen';
       alert('❌ Falsches Passwort – bitte erneut versuchen.');
       return;
     }
 
-    document.getElementById('wakeMsg').classList.add('hidden');
-    log('✅ Passwort akzeptiert');
-    log('🔐 Login bei join-the-crew …');
-
-    // 3. Excel anfordern
-    const resp = await fetch(`${BACKEND_URL}/download?password=${encodeURIComponent(password)}`);
-    if(!resp.ok){
-      const err = await resp.json().catch(()=>({error:`HTTP ${resp.status}`}));
-      throw new Error(err.error || `HTTP ${resp.status}`);
-    }
-
-    log('📦 Daten von Algolia geladen');
-    log('📊 Excel wird erstellt …');
-
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
+    // Passwort ok → Excel direkt aus dem Repository herunterladen
+    btn.innerHTML = '<div class="spinner"></div> Wird heruntergeladen …';
     const date = new Date().toISOString().slice(0,10);
-    a.href     = url;
+    const a    = document.createElement('a');
+    a.href     = 'skipperplan.xlsx';
     a.download = `skipperplan_${date}.xlsx`;
     a.click();
-    URL.revokeObjectURL(url);
 
-    log('✅ Fertig – Download gestartet!', 'ok');
+    btn.disabled = false;
+    btn.innerHTML = 'Excel herunterladen';
     setStep(3);
     document.getElementById('cardDone').classList.remove('hidden');
 
   } catch(e) {
-    log(`❌ Fehler: ${e.message}`, 'err');
     btn.disabled = false;
-    btn.innerHTML = 'Excel erstellen &amp; herunterladen';
+    btn.innerHTML = 'Excel herunterladen';
+    alert(`❌ Fehler: ${e.message}`);
   }
 }
 
 function resetApp(){
-  ['cardLoad','cardDone'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('cardDone').classList.add('hidden');
   document.getElementById('cardStart').classList.remove('hidden');
-  document.getElementById('log').innerHTML='';
   setStep(1);
 }
 </script>
