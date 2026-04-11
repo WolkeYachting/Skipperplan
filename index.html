@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0a1628">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Skipperplan</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛵</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛵</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a1628;--surface:#111f38;--card:#162640;--border:#1e3354;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2eaf8;--muted:#5a7399;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--radius:12px}
@@ -87,6 +89,7 @@
   <div class="card hidden" id="cardRefresh">
     <div class="card-title"><span>🔄</span> Wird aktualisiert …</div>
     <div class="log" id="log"></div>
+    <button class="btn btn-outline hidden" id="btnRetry" onclick="retryRefresh()" style="margin-top:12px">Erneut versuchen</button>
   </div>
 
   <!-- Karte 3: Fertig -->
@@ -182,10 +185,16 @@ async function startRefresh(){
   setStep(2);
 
   log('Verbindung wird aufgebaut …');
-  log('Daten werden abgerufen – bitte warten …');
+  log('Server wird gestartet und Daten abgerufen – bitte bis zu 60 Sek. warten …');
 
   try {
-    const resp = await fetch(`${BACKEND_URL}/refresh`);
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 90000); // 90 Sek. Timeout
+
+    const resp = await fetch(`${BACKEND_URL}/refresh`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
     const data = await resp.json();
 
     if(!resp.ok || data.error){
@@ -204,9 +213,20 @@ async function startRefresh(){
     document.getElementById('cardDone').classList.remove('hidden');
 
   } catch(e){
-    log(`Fehler: ${e.message}`, 'err');
-    log('Tipp: Der Server braucht beim ersten Aufruf bis zu 30 Sek. – bitte erneut versuchen.', 'info');
+    if(e.name === 'AbortError'){
+      log('Timeout – Server hat nicht rechtzeitig geantwortet.', 'err');
+    } else {
+      log(`Fehler: ${e.message}`, 'err');
+    }
+    log('Bitte erneut versuchen – der Server braucht beim ersten Aufruf bis zu 30 Sek. zum Starten.', 'info');
+    document.getElementById('btnRetry').classList.remove('hidden');
   }
+}
+
+function retryRefresh(){
+  document.getElementById('log').innerHTML='';
+  document.getElementById('btnRetry').classList.add('hidden');
+  startRefresh();
 }
 
 function resetApp(){
