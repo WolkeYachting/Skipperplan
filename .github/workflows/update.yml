@@ -9,18 +9,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Repository auschecken
-        uses: actions/checkout@v4
-
-      - name: Excel vom Backend herunterladen
+      - name: Backend aufrufen
         run: |
-          curl -f -o skipperplan.xlsx \
-            "https://skipperplan-backend.onrender.com/download?password=${{ secrets.APP_PASSWORD }}"
-
-      - name: Excel ins Repository committen
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add skipperplan.xlsx
-          git diff --staged --quiet || git commit -m "Skipperplan aktualisiert: $(date +'%d.%m.%Y')"
-          git push
+          curl --max-time 120 -f \
+            "https://skipperplan-backend.onrender.com/refresh?source=daily&password=${{ secrets.APP_PASSWORD }}"
