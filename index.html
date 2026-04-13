@@ -14,8 +14,22 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
-  .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:24px 16px 40px}
-  .header{display:flex;align-items:center;gap:14px;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+
+  /* ── Passwort-Gate ── */
+  #gate{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}
+  .gate-box{width:100%;max-width:360px}
+  .gate-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px}
+  .gate-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:grid;place-items:center;font-size:26px;box-shadow:0 0 24px rgba(59,130,246,.4)}
+  .gate-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800}
+  .gate-sub{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
+  .gate-label{display:block;font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase}
+  .gate-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:15px;padding:13px 16px;outline:none;-webkit-appearance:none;transition:border-color .2s;margin-bottom:14px}
+  .gate-input:focus{border-color:var(--accent)}
+  .gate-err{font-size:12px;color:var(--danger);margin-top:-8px;margin-bottom:12px;display:none}
+
+  /* ── App ── */
+  .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:24px 16px 40px;display:none}
+  .header{display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
   .logo{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:grid;place-items:center;font-size:22px;flex-shrink:0;box-shadow:0 0 20px rgba(59,130,246,.3)}
   .header-text h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1}
   .header-text p{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
@@ -29,7 +43,7 @@
   .btn-secondary{background:linear-gradient(135deg,#1e3a5f,#162d4a);color:var(--text);border:1px solid var(--border);margin-top:10px}
   .btn-secondary:active{transform:scale(.97)}
   .btn-secondary:disabled{opacity:.5;cursor:not-allowed;transform:none}
-  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:9px;margin-top:8px}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:9px}
   .btn-outline:active{background:var(--surface)}
   .steps{display:flex;gap:6px;margin-bottom:24px}
   .step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .4s}
@@ -50,7 +64,27 @@
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ── Passwort-Gate ──────────────────────────────────────────────────────── -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <div class="gate-icon">⛵</div>
+      <div>
+        <div class="gate-title">Skipperplan</div>
+        <div class="gate-sub">Flotilla Management</div>
+      </div>
+    </div>
+    <label class="gate-label" for="gatePassword">Passwort</label>
+    <input type="password" id="gatePassword" class="gate-input" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')unlock()">
+    <div id="gateErr" class="gate-err">❌ Falsches Passwort</div>
+    <button class="btn btn-primary" onclick="unlock()">Anmelden</button>
+  </div>
+</div>
+
+<!-- ── App ───────────────────────────────────────────────────────────────── -->
+<div class="app" id="app">
   <div class="header">
     <div class="logo">⛵</div>
     <div class="header-text">
@@ -65,18 +99,9 @@
     <div class="step" id="s3"></div>
   </div>
 
-  <!-- Karte 1: Download -->
   <div class="card" id="cardStart">
-    <div class="card-title"><span>📥</span> Skipperplan herunterladen</div>
+    <div class="card-title"><span>📥</span> Skipperplan</div>
     <div class="timestamp" id="timestamp">Zuletzt aktualisiert: wird geladen …</div>
-
-    <div style="margin-bottom:16px">
-      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase">Passwort</label>
-      <input type="password" id="appPassword" placeholder="••••••••"
-        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:10px 12px;outline:none;-webkit-appearance:none"
-        onkeydown="if(event.key==='Enter')startDownload()">
-    </div>
-
     <button class="btn btn-primary" id="btnDownload" onclick="startDownload()">
       Excel herunterladen
     </button>
@@ -85,34 +110,52 @@
     </button>
   </div>
 
-  <!-- Karte 2: Aktualisierung läuft -->
   <div class="card hidden" id="cardRefresh">
     <div class="card-title"><span>🔄</span> Wird aktualisiert …</div>
     <div class="log" id="log"></div>
     <button class="btn btn-outline hidden" id="btnRetry" onclick="retryRefresh()" style="margin-top:12px">Erneut versuchen</button>
-    <button class="btn btn-outline hidden" id="btnBackFromRefresh" onclick="resetApp()" style="margin-top:12px">Zurück</button>
-  </div>
-
-  <!-- Karte 3: Fertig -->
-  <div class="card hidden" id="cardDone">
-    <div class="card-title"><span>✅</span> Fertig</div>
-    <button class="btn btn-outline" onclick="resetApp()">Zurück</button>
+    <button class="btn btn-outline hidden" id="btnBack" onclick="resetApp()" style="margin-top:8px">Zurück</button>
   </div>
 </div>
 
 <script>
 const BACKEND_URL   = 'https://skipperplan-backend.onrender.com';
-const GITHUB_RAW    = 'https://raw.githubusercontent.com/wolkeyachting/Skipperplan/main';
 const PASSWORD_HASH = '7bceca6824c799e3534f015b64d480ede43a40539dd970d3ea6476fe974fa73e';
 
-// ── Zeitstempel aus GitHub API laden ─────────────────────────────────────────
+// ── Passwort-Gate ─────────────────────────────────────────────────────────────
+async function hashPw(pw){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+async function unlock(){
+  const pw = document.getElementById('gatePassword').value;
+  if(!pw) return;
+  const hash = await hashPw(pw);
+  if(hash !== PASSWORD_HASH){
+    document.getElementById('gateErr').style.display = 'block';
+    document.getElementById('gatePassword').value = '';
+    return;
+  }
+  sessionStorage.setItem('unlocked', '1');
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display  = 'block';
+  loadTimestamp();
+}
+
+// Beim Laden prüfen ob Session noch aktiv
+if(sessionStorage.getItem('unlocked') === '1'){
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display  = 'block';
+}
+
+// ── Zeitstempel ───────────────────────────────────────────────────────────────
 async function loadTimestamp(){
   try {
     const resp = await fetch('https://api.github.com/repos/wolkeyachting/Skipperplan/commits?path=skipperplan.xlsx&per_page=1');
     if(!resp.ok) return;
     const data = await resp.json();
     if(data[0]){
-      const msg  = data[0].commit.message;
       const date = new Date(data[0].commit.committer.date);
       const str  = date.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC';
       document.getElementById('timestamp').innerHTML = `Zuletzt aktualisiert: <strong>${str}</strong>`;
@@ -122,67 +165,37 @@ async function loadTimestamp(){
   }
 }
 
-// ── Passwort-Hash prüfen ──────────────────────────────────────────────────────
-async function checkPassword(pw){
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-  const hash = [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
-  return hash === PASSWORD_HASH;
-}
-
+// ── Hilfsfunktionen ───────────────────────────────────────────────────────────
 function log(msg, type='info'){
   const icons={ok:'✓',err:'✗',info:'·'};
   const el=document.getElementById('log');
   el.innerHTML+=`<div class="log-line ${type}"><span class="icon">${icons[type]||'·'}</span><span class="log-text">${msg}</span></div>`;
   el.scrollTop=el.scrollHeight;
 }
-
 function setStep(n){
-  [1,2,3].forEach(i=>{
-    document.getElementById('s'+i).className='step'+(i<n?' done':i===n?' active':'');
-  });
+  [1,2,3].forEach(i=>document.getElementById('s'+i).className='step'+(i<n?' done':i===n?' active':''));
 }
 
 // ── Download ──────────────────────────────────────────────────────────────────
 async function startDownload(){
-  const pw = document.getElementById('appPassword').value;
-  if(!pw){ alert('Bitte Passwort eingeben.'); return; }
-
-  const btn = document.getElementById('btnDownload');
+  const btn  = document.getElementById('btnDownload');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Passwort wird geprüft …';
-
-  const ok = await checkPassword(pw);
-  if(!ok){
-    btn.disabled = false;
-    btn.innerHTML = 'Excel herunterladen';
-    alert('❌ Falsches Passwort.');
-    return;
-  }
-
   btn.innerHTML = '<div class="spinner"></div> Wird heruntergeladen …';
   const date = new Date().toISOString().slice(0,10);
   const a    = document.createElement('a');
   a.href     = 'skipperplan.xlsx';
   a.download = `skipperplan_${date}.xlsx`;
   a.click();
-
   btn.disabled = false;
   btn.innerHTML = 'Excel herunterladen';
-  setStep(3);
-  document.getElementById('cardDone').classList.remove('hidden');
-  document.getElementById('cardStart').classList.add('hidden');
 }
 
 // ── Aktualisieren ─────────────────────────────────────────────────────────────
 async function startRefresh(){
-  const pw = document.getElementById('appPassword').value;
-  if(!pw){ alert('Bitte Passwort eingeben.'); return; }
-
-  const ok = await checkPassword(pw);
-  if(!ok){ alert('❌ Falsches Passwort.'); return; }
-
   document.getElementById('cardStart').classList.add('hidden');
   document.getElementById('cardRefresh').classList.remove('hidden');
+  document.getElementById('btnRetry').classList.add('hidden');
+  document.getElementById('btnBack').classList.add('hidden');
   setStep(2);
 
   log('Verbindung wird aufgebaut …');
@@ -190,58 +203,48 @@ async function startRefresh(){
 
   try {
     const controller = new AbortController();
-    const timeout    = setTimeout(() => controller.abort(), 90000); // 90 Sek. Timeout
-
-    const resp = await fetch(`${BACKEND_URL}/refresh`, {
-      signal: controller.signal
-    });
+    const timeout    = setTimeout(()=>controller.abort(), 90000);
+    const resp       = await fetch(`${BACKEND_URL}/refresh`, {signal: controller.signal});
     clearTimeout(timeout);
-    const data = await resp.json();
 
-    if(!resp.ok || data.error){
-      throw new Error(data.error || `HTTP ${resp.status}`);
-    }
+    const data = await resp.json();
+    if(!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
 
     log(`Daten abgerufen: ${data.termine} Termine, ${data.yachten} Yachten`, 'ok');
-    log('Excel erstellt und gespeichert', 'ok');
-    log(`Aktualisiert: ${data.updated}`, 'ok');
+    if(data.changes > 0) log(`${data.changes} Änderungen im Changelog erfasst`, 'ok');
+    if(data.sailing > 0) log(`${data.sailing} Boote aktuell auf dem Wasser`, 'ok');
+    log(`Excel gespeichert: ${data.updated}`, 'ok');
     log('✅ Fertig!', 'ok');
 
-    // Zeitstempel neu laden
     await loadTimestamp();
-
     setStep(3);
-    document.getElementById('btnRetry').classList.add('hidden');
-    document.getElementById('btnBackFromRefresh').classList.remove('hidden');
+    document.getElementById('btnBack').classList.remove('hidden');
 
   } catch(e){
-    if(e.name === 'AbortError'){
-      log('Timeout – Server hat nicht rechtzeitig geantwortet.', 'err');
-    } else {
-      log(`Fehler: ${e.message}`, 'err');
-    }
-    log('Bitte erneut versuchen – der Server braucht beim ersten Aufruf bis zu 30 Sek. zum Starten.', 'info');
+    if(e.name==='AbortError') log('Timeout – Server hat nicht rechtzeitig geantwortet.', 'err');
+    else log(`Fehler: ${e.message}`, 'err');
+    log('Bitte erneut versuchen – beim ersten Aufruf braucht der Server bis zu 30 Sek.', 'info');
     document.getElementById('btnRetry').classList.remove('hidden');
+    document.getElementById('btnBack').classList.remove('hidden');
   }
 }
 
 function retryRefresh(){
   document.getElementById('log').innerHTML='';
   document.getElementById('btnRetry').classList.add('hidden');
+  document.getElementById('btnBack').classList.add('hidden');
   startRefresh();
 }
 
 function resetApp(){
-  ['cardRefresh','cardDone'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('cardRefresh').classList.add('hidden');
   document.getElementById('cardStart').classList.remove('hidden');
   document.getElementById('log').innerHTML='';
-  document.getElementById('btnRetry').classList.add('hidden');
-  document.getElementById('btnBackFromRefresh').classList.add('hidden');
   setStep(1);
 }
 
-// Zeitstempel beim Laden der Seite abrufen
-loadTimestamp();
+// Zeitstempel laden falls bereits eingeloggt
+if(sessionStorage.getItem('unlocked')==='1') loadTimestamp();
 </script>
 </body>
 </html>
